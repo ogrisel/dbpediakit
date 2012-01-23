@@ -38,7 +38,7 @@ def human_readable(id, prefix="http://dbpedia.org/resource/"):
     return unquote(id[len(prefix):]).replace('_', ' ')
 
 
-def extract_abstracts(filename, max_items=None, verbose=True):
+def extract_abstracts(filename, max_items=None, min_length=500, verbose=True):
     """Extract and decode abstracts on the fly
 
     Return a generator of (id, title, text) triples:
@@ -50,10 +50,12 @@ def extract_abstracts(filename, max_items=None, verbose=True):
     reader = BZ2File if filename.endswith('.bz2') else open
 
     current_line_number = 0
+    extracted = 0
+
     with reader(filename, 'rb') as f:
         for line in f:
             current_line_number += 1
-            if max_items is not None and current_line_number > max_items:
+            if max_items is not None and extracted > max_items:
                 break
             if verbose and current_line_number % 10000 == 0:
                 print "Decoding line %d" % current_line_number
@@ -66,9 +68,29 @@ def extract_abstracts(filename, max_items=None, verbose=True):
             id = m.group(1)
             title = human_readable(id)
             text = m.group(2).decode('unicode-escape')
+            if len(text) < min_length:
+                continue
             yield (id, title, text)
+            extracted += 1
+
+
+def extract_as_files(filename, target_folder, max_items=None, min_length=500,
+                     verbose=True):
+    """Extract archives entries as independent text files"""
+    if not os.path.exists(target_folder):
+        os.makedirs(target_folder)
+
+    for _, title, text in extract_abstracts(
+        filename, max_items=max_items, min_length=min_length,
+        verbose=verbose):
+
+        target_filename = title.replace('/', ' ') + ".txt"
+        target_filename = os.path.join(target_folder, target_filename)
+        with open(target_filename, 'wb') as f:
+            f.write(text)
+            f.write("\n")
 
 
 if __name__ == "__main__":
-    for id, title, text in extract_abstracts(fetch(), max_items=10):
+    for id, title, text in extract_abstracts(fetch(), max_items=3):
         print "%s\n\n%s\n\n" % (title, text)
