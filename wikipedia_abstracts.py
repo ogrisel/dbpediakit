@@ -3,6 +3,8 @@
 
 import os
 import re
+import csv
+from collections import namedtuple
 from urllib import unquote
 from bz2 import BZ2File
 
@@ -13,6 +15,9 @@ LANG = "en"
 LOCAL_FOLDER = os.path.join("~", "data", "dbpedia")
 
 LINE_PATTERN = re.compile(r'<([^<]+?)> <[^<]+?> "(.*)"@\w\w .\n')
+
+
+article = namedtuple('article', ('id', 'title', 'text'))
 
 
 def fetch(lang=LANG, version=VERSION, folder=LOCAL_FOLDER):
@@ -41,7 +46,7 @@ def human_readable(id, prefix="http://dbpedia.org/resource/"):
 def extract_abstracts(filename, max_items=None, min_length=500, verbose=True):
     """Extract and decode abstracts on the fly
 
-    Return a generator of (id, title, text) triples:
+    Return a generator of article(id, title, text) named tuples:
     - id is the raw DBpedia URI of the resource.
     - title that should match the Wikipedia title of the article.
     - text is the first paragraph of the Wikipedia article without any markup.
@@ -70,25 +75,30 @@ def extract_abstracts(filename, max_items=None, min_length=500, verbose=True):
             text = m.group(2).decode('unicode-escape')
             if len(text) < min_length:
                 continue
-            yield (id, title, text)
+            yield article(id, title, text)
             extracted += 1
 
 
-def extract_as_files(filename, target_folder, max_items=None, min_length=500,
-                     verbose=True):
+def dump_as_files(tuples, target_folder):
     """Extract archives entries as independent text files"""
     if not os.path.exists(target_folder):
         os.makedirs(target_folder)
 
-    for _, title, text in extract_abstracts(
-        filename, max_items=max_items, min_length=min_length,
-        verbose=verbose):
-
-        target_filename = title.replace('/', ' ') + ".txt"
-        target_filename = os.path.join(target_folder, target_filename)
-        with open(target_filename, 'wb') as f:
+    for _, title, text in tuples:
+        filename = title.replace('/', ' ') + ".txt"
+        filename = os.path.join(target_folder, filename)
+        with open(filename, 'wb') as f:
             f.write(text)
             f.write("\n")
+
+
+def dump_as_csv(tuples, filename):
+    """Extract archives entries as a single CSV file"""
+
+    with open(filename, 'wt') as f:
+        writer = csv.writer(f, quoting=csv.QUOTE_NONNUMERIC)
+        for tuple in tuples:
+            writer.writerow(tuple)
 
 
 if __name__ == "__main__":
