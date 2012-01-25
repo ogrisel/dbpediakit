@@ -1,4 +1,4 @@
-"""Utility script to extract the text abstract of Wikipedia from DBpedia"""
+"""Utility script to tweak the ntriples DBpedia dumps"""
 # License: MIT
 
 import os
@@ -9,18 +9,19 @@ from urllib import unquote
 from bz2 import BZ2File
 
 URL_PATTERN = ("http://downloads.dbpedia.org/"
-               "{version}/{lang}/long_abstracts_{lang}.nt.bz2")
+               "{version}/{lang}/{archive_name}_{lang}.nt.bz2")
 VERSION = "3.7"
 LANG = "en"
 LOCAL_FOLDER = os.path.join("~", "data", "dbpedia")
 
-LINE_PATTERN = re.compile(r'<([^<]+?)> <[^<]+?> "(.*)"@\w\w .\n')
+TEXT_LINE_PATTERN = re.compile(r'<([^<]+?)> <[^<]+?> "(.*)"@(\w\w) .\n')
 
 
-article = namedtuple('article', ('id', 'title', 'text'))
+article = namedtuple('article', ('id', 'title', 'text', 'lang'))
+link = namedtuple('link', ('source', 'target'))
 
 
-def fetch(lang=LANG, version=VERSION, folder=LOCAL_FOLDER):
+def fetch(archive_name, lang=LANG, version=VERSION, folder=LOCAL_FOLDER):
     """Fetch the DBpedia abstracts dump and cache it locally"""
     folder = os.path.expanduser(folder)
     if not os.path.exists(folder):
@@ -43,13 +44,14 @@ def human_readable(id, prefix="http://dbpedia.org/resource/"):
     return unquote(id[len(prefix):]).replace('_', ' ')
 
 
-def extract_abstracts(filename, max_items=None, min_length=500, verbose=True):
-    """Extract and decode abstracts on the fly
+def extract_text(filename, max_items=None, min_length=300, verbose=True):
+    """Extract and decode text literals on the fly
 
     Return a generator of article(id, title, text) named tuples:
     - id is the raw DBpedia URI of the resource.
     - title that should match the Wikipedia title of the article.
     - text is the first paragraph of the Wikipedia article without any markup.
+    - lang is the language code of the text literal
 
     """
     reader = BZ2File if filename.endswith('.bz2') else open
@@ -64,7 +66,7 @@ def extract_abstracts(filename, max_items=None, min_length=500, verbose=True):
                 break
             if verbose and current_line_number % 10000 == 0:
                 print "Decoding line %d" % current_line_number
-            m = LINE_PATTERN.match(line)
+            m = TEXT_LINE_PATTERN.match(line)
             if m is None:
                 if verbose:
                     print ("[WARNING] Invalid line %d, skipping."
@@ -75,7 +77,8 @@ def extract_abstracts(filename, max_items=None, min_length=500, verbose=True):
             text = m.group(2).decode('unicode-escape')
             if len(text) < min_length:
                 continue
-            yield article(id, title, text)
+            lang = m.group(3)
+            yield article(id, title, text, lang)
             extracted += 1
 
 
@@ -92,15 +95,19 @@ def dump_as_files(tuples, target_folder):
             f.write("\n")
 
 
-def dump_as_csv(tuples, filename):
-    """Extract archives entries as a single CSV file"""
+def dump_as_csv(tuples, output):
+    """Extract archives entries as a single CSV file
 
-    with open(filename, 'wt') as f:
-        writer = csv.writer(f, quoting=csv.QUOTE_NONNUMERIC)
+    output can be a filename or a file-like object such as stdout.
+    """
+
+    def write_csv(f):
+        writer = csv.writer(output, quoting=csv.QUOTE_NONNUMERIC)
         for tuple in tuples:
             writer.writerow(tuple)
 
-
-if __name__ == "__main__":
-    for id, title, text in extract_abstracts(fetch(), max_items=3):
-        print "%s\n\n%s\n\n" % (title, text)
+    if hasattr(output, 'write'):
+        write_csv(output)
+    else:
+        with open(output, 'wt') as f:
+            write_csv(f)
