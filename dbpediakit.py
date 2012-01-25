@@ -85,8 +85,9 @@ def extract_link(archive_filename, max_items=None, predicate_filter=None,
                 logging.info("Decoding line %d", current_line_number)
             m = LINK_LINE_PATTERN.match(line)
             if m is None:
-                logging.warn("Invalid line %d, skipping.",
-                             current_line_number)
+                if TEXT_LINE_PATTERN.match(line) is None:
+                    logging.warn("Invalid line %d, skipping.",
+                                 current_line_number)
                 continue
             predicate = m.group(2)
             if (predicate_filter is not None
@@ -98,7 +99,7 @@ def extract_link(archive_filename, max_items=None, predicate_filter=None,
                 source = source[len(strip_prefix):]
                 target = target[len(strip_prefix):]
 
-            yield article(source, target)
+            yield link(source, target)
             extracted += 1
 
 
@@ -128,8 +129,9 @@ def extract_text(archive_filename, max_items=None, min_length=300,
                 logging.info("Decoding line %d", current_line_number)
             m = TEXT_LINE_PATTERN.match(line)
             if m is None:
-                logging.warn("Invalid line %d, skipping.",
-                             current_line_number)
+                if LINK_LINE_PATTERN.match(line) is None:
+                    logging.warn("Invalid line %d, skipping.",
+                                 current_line_number)
                 continue
             id = m.group(1)
             if strip_prefix:
@@ -163,7 +165,7 @@ def dump_as_csv(tuples, output):
     """
 
     def write_csv(f):
-        writer = csv.writer(output, quoting=csv.QUOTE_NONNUMERIC)
+        writer = csv.writer(f, quoting=csv.QUOTE_NONNUMERIC)
         for tuple in tuples:
             writer.writerow(tuple)
 
