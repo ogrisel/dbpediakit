@@ -37,6 +37,7 @@ your unix account as access to it with::
 # dependency on sqlalchemy just for a tiny script, don't use this on a
 # production webapplication with untrusted users
 
+import logging
 import dbpediakit as db
 import subprocess as sp
 
@@ -45,6 +46,7 @@ SQL_LIST_TABLES = ("SELECT tablename FROM pg_tables"
 
 DATABASE = "dbpediakit"
 PSQL = "psql"
+PG_COPY_END_MARKER = "\\.\n"  # an EOF "\x04" would also probably work
 
 
 def execute(query, database=DATABASE):
@@ -56,16 +58,20 @@ def select(query, database=DATABASE):
 
 
 def copy(tuples, table, database=DATABASE):
+    """Pipe the tuples as a CSV stream to a posgresql database table"""
     query = "COPY %s FROM STDIN WITH CSV" % table
     p = sp.Popen([PSQL, database, "-c", query], stdin=sp.PIPE)
-    db.dump_as_csv(tuples, p.stdin, end_marker="\\.\n")
-    assert p.wait() == 0
+    db.dump_as_csv(tuples, p.stdin, end_marker=PG_COPY_END_MARKER)
+    if p.wait() != 0:
+        logging.error("Failed to load tuples into %s", table)
 
 
 def check_link_table(archive_name, table, database=DATABASE, **extract_params):
     """Intialize a SQL table to host link tuples from dump"""
     if table in select(SQL_LIST_TABLES):
         return
+    logging.info("Loading link table '%s' with tuples from archive '%s'",
+                 table, archive_name)
 
     query = "CREATE TABLE " + table
     query += " ("
@@ -78,15 +84,31 @@ def check_link_table(archive_name, table, database=DATABASE, **extract_params):
     copy(tuples, table, database=database)
 
 
+def check_text_table(archive_name, table, database=DATABASE, **extract_params):
+    """Intialize a SQL table to host link tuples from dump"""
+    if table in select(SQL_LIST_TABLES):
+        return
+    logging.info("Loading text table '%s' with tuples from archive '%s'",
+                 table, archive_name)
+
+    query = "CREATE TABLE " + table
+    query += " ("
+    query += " id varchar(100) NOT NULL,"
+    query += " title varchar(100),"
+    query += " text text,"
+    query += " lang char(2)"
+    query += ");"
+    execute(query, database=database)
+
+    tuples = db.extract_text(db.fetch(archive_name), **extract_params)
+    copy(tuples, table, database=database)
+
+
 if __name__ == "__main__":
-    max_items = 100  # set to None for processing the complete dumps
+    max_items = None  # set to None for processing the complete dumps
 
     # Ensure the data is cached locally or download it from the dbpedia.org
     # site
-
-    long_abstracts = db.extract_text(
-        db.fetch("long_abstracts"),
-        max_items=max_items)
 
     check_link_table(
         "redirects", "redirects",
@@ -97,6 +119,8 @@ if __name__ == "__main__":
         "skos_categories", "skos_categories",
         predicate_filter="http://www.w3.org/2004/02/skos/core#broader",
         max_items=max_items)
+
+    check_text_table("long_abstracts", "long_abstracts", max_items=max_items)
 
 #    import sys
 #    db.dump_as_csv(skos_categories, sys.stdout)

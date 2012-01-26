@@ -81,7 +81,7 @@ def extract_link(archive_filename, max_items=None, predicate_filter=None,
             current_line_number += 1
             if max_items is not None and extracted > max_items:
                 break
-            if current_line_number % 10000 == 0:
+            if current_line_number % 100000 == 0:
                 logging.info("Decoding line %d", current_line_number)
             m = LINK_LINE_PATTERN.match(line)
             if m is None:
@@ -125,7 +125,7 @@ def extract_text(archive_filename, max_items=None, min_length=300,
             current_line_number += 1
             if max_items is not None and extracted > max_items:
                 break
-            if current_line_number % 10000 == 0:
+            if current_line_number % 100000 == 0:
                 logging.info("Decoding line %d", current_line_number)
             m = TEXT_LINE_PATTERN.match(line)
             if m is None:
@@ -164,7 +164,6 @@ def dump_as_csv(tuples, output, end_marker=None):
 
     output can be a filename or a file-like object such as stdout.
     """
-    logging.info("Dumping tuples as CSV into %s", output)
     def write_csv(f):
         writer = csv.writer(f, quoting=csv.QUOTE_NONNUMERIC)
         for tuple in tuples:
