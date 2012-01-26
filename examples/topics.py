@@ -75,8 +75,8 @@ def check_link_table(archive_name, table, database=DATABASE, **extract_params):
 
     query = "CREATE TABLE " + table
     query += " ("
-    query += " source varchar(100) NOT NULL,"
-    query += " target varchar(100) NOT NULL"
+    query += " source varchar(300) NOT NULL,"
+    query += " target varchar(300) NOT NULL"
     query += ");"
     execute(query, database=database)
 
@@ -93,8 +93,8 @@ def check_text_table(archive_name, table, database=DATABASE, **extract_params):
 
     query = "CREATE TABLE " + table
     query += " ("
-    query += " id varchar(100) NOT NULL,"
-    query += " title varchar(100),"
+    query += " id varchar(300) NOT NULL,"
+    query += " title varchar(300),"
     query += " text text,"
     query += " lang char(2)"
     query += ");"
