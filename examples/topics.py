@@ -3,7 +3,7 @@ r"""Use PostgreSQL to extract a taxonomy out of DBpedia categories
 The default category tree of DBpedia / Wikipedia has more than 500k categories
 most of which are not interesting.
 
-This scripts load the whole tree in a PostgreSQL DB and use several joins to
+This script loads the whole tree in a PostgreSQL DB and use several joins to
 extract a substree of ~50K interesting topics which focusing on topics that are
 related to an resource with a descriptive enough abstract.
 
@@ -48,6 +48,7 @@ DATABASE = "dbpediakit"
 PSQL = "psql"
 PG_COPY_END_MARKER = "\\.\n"  # an EOF "\x04" would also probably work
 BUFSIZE = 1024 ** 2
+CREATE_INDEX = "CREATE INDEX {table}_{column}_idx ON {table} ({column})"
 
 
 def execute(query, database=DATABASE):
@@ -68,34 +69,47 @@ def copy(tuples, table, database=DATABASE):
         logging.error("Failed to load tuples into %s", table)
 
 
-def check_link_table(archive_name, table, database=DATABASE, **extract_params):
+def check_link_table(archive_name, table, database=DATABASE,
+                     processor=None,
+                     columns=(('source', True), ('target', True)),
+                     **extract_params):
     """Intialize a SQL table to host link tuples from dump"""
-    if table in select(SQL_LIST_TABLES):
+    if table in select(SQL_LIST_TABLES).split():
+        logging.info("Table '%s' exists: skipping init from archive '%s'",
+                     table, archive_name)
         return
     logging.info("Loading link table '%s' with tuples from archive '%s'",
                  table, archive_name)
 
     query = "CREATE TABLE " + table
     query += " ("
-    query += " source varchar(300) NOT NULL,"
-    query += " target varchar(300) NOT NULL"
+    query += ", ".join(column + " varchar(300)" for column, _ in columns)
     query += ");"
     execute(query, database=database)
 
     tuples = db.extract_link(db.fetch(archive_name), **extract_params)
+    if processor is not None:
+        tuples = processor(tuples)
     copy(tuples, table, database=database)
+
+    for column, index in columns:
+        logging.info("Creating index on column '%s' in table '%s'",
+                     column, table)
+        execute(CREATE_INDEX.format(table=table, column=column))
 
 
 def check_text_table(archive_name, table, database=DATABASE, **extract_params):
     """Intialize a SQL table to host link tuples from dump"""
-    if table in select(SQL_LIST_TABLES):
+    if table in select(SQL_LIST_TABLES).split():
+        logging.info("Table '%s' exists: skipping init from archive '%s'",
+                     table, archive_name)
         return
     logging.info("Loading text table '%s' with tuples from archive '%s'",
                  table, archive_name)
 
     query = "CREATE TABLE " + table
     query += " ("
-    query += " id varchar(300) NOT NULL,"
+    query += " id varchar(300),"
     query += " title varchar(300),"
     query += " text text,"
     query += " lang char(2)"
@@ -104,6 +118,9 @@ def check_text_table(archive_name, table, database=DATABASE, **extract_params):
 
     tuples = db.extract_text(db.fetch(archive_name), **extract_params)
     copy(tuples, table, database=database)
+    logging.info("Creating index on column '%s' in table '%s'",
+                 "id", table)
+    execute(CREATE_INDEX.format(table=table, column="id"))
 
 
 if __name__ == "__main__":
@@ -117,9 +134,19 @@ if __name__ == "__main__":
         predicate_filter="http://dbpedia.org/ontology/wikiPageRedirects",
         max_items=max_items)
 
+    def candidate_article_processor(tuples):
+        for source, target in tuples:
+            yield (source, target, source[len("Category:"):])
+
     check_link_table(
-        "skos_categories", "skos_categories",
+        "skos_categories", "categories",
         predicate_filter="http://www.w3.org/2004/02/skos/core#broader",
+        columns=(
+            ('id', True),
+            ('broader', True),
+            ('candidate_article', True),
+        ),
+        processor=candidate_article_processor,
         max_items=max_items)
 
     check_link_table(
