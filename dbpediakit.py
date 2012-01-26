@@ -56,7 +56,8 @@ def fetch(archive_name, lang=LANG, version=VERSION, folder=LOCAL_FOLDER):
 
 
 def extract_link(archive_filename, max_items=None, predicate_filter=None,
-                 strip_prefix="http://dbpedia.org/resource/"):
+                 strip_prefix="http://dbpedia.org/resource/",
+                 max_id_length=300):
     """Extract link information on the fly
 
     Predicate filter can be a single string or a collection of strings
@@ -98,13 +99,21 @@ def extract_link(archive_filename, max_items=None, predicate_filter=None,
             if strip_prefix is not None:
                 source = source[len(strip_prefix):]
                 target = target[len(strip_prefix):]
+            if (max_id_length is not None
+                and (len(source) > max_id_length
+                     or len(target)> max_id_length)):
+                logging.warn("Skipping line %d, with len(source) = %d and"
+                             " len(target) = %d",
+                             current_line_number, len(source), len(target))
+                continue
 
             yield link(source, target)
             extracted += 1
 
 
 def extract_text(archive_filename, max_items=None, min_length=300,
-                 strip_prefix="http://dbpedia.org/resource/"):
+                 strip_prefix="http://dbpedia.org/resource/",
+                 max_id_length=300):
     """Extract and decode text literals on the fly
 
     Return a generator of article(id, title, text) named tuples:
@@ -136,6 +145,10 @@ def extract_text(archive_filename, max_items=None, min_length=300,
             id = m.group(1)
             if strip_prefix:
                 id = id[len(strip_prefix):]
+            if (max_id_length is not None and len(id) > max_id_length):
+                logging.warn("Skipping line %d, with id with length %d",
+                             current_line_number, len(id))
+                continue
             title = unquote(id).replace('_', ' ')
             text = m.group(2).decode('unicode-escape')
             if len(text) < min_length:
