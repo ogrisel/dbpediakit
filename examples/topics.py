@@ -122,6 +122,10 @@ if __name__ == "__main__":
         predicate_filter="http://www.w3.org/2004/02/skos/core#broader",
         max_items=max_items)
 
+    check_link_table(
+        "article_categories", "article_categories",
+        predicate_filter="http://purl.org/dc/terms/subject")
+
     check_text_table("long_abstracts", "long_abstracts", max_items=max_items)
 
 #    import sys
