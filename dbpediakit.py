@@ -150,6 +150,7 @@ def dump_as_files(tuples, target_folder):
     if not os.path.exists(target_folder):
         os.makedirs(target_folder)
 
+    logging.info("Dumping tuples as text files in %s", target_folder)
     for _, title, text in tuples:
         filename = title.replace('/', ' ') + ".txt"
         filename = os.path.join(target_folder, filename)
@@ -158,16 +159,18 @@ def dump_as_files(tuples, target_folder):
             f.write("\n")
 
 
-def dump_as_csv(tuples, output):
+def dump_as_csv(tuples, output, end_marker=None):
     """Extract archives entries as a single CSV file
 
     output can be a filename or a file-like object such as stdout.
     """
-
+    logging.info("Dumping tuples as CSV into %s", output)
     def write_csv(f):
         writer = csv.writer(f, quoting=csv.QUOTE_NONNUMERIC)
         for tuple in tuples:
             writer.writerow(tuple)
+        if end_marker is not None:
+            f.write(end_marker)
 
     if hasattr(output, 'write'):
         write_csv(output)
