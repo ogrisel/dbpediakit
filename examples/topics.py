@@ -47,6 +47,7 @@ SQL_LIST_TABLES = ("SELECT tablename FROM pg_tables"
 DATABASE = "dbpediakit"
 PSQL = "psql"
 PG_COPY_END_MARKER = "\\.\n"  # an EOF "\x04" would also probably work
+BUFSIZE = 1024 ** 2
 
 
 def execute(query, database=DATABASE):
@@ -60,7 +61,8 @@ def select(query, database=DATABASE):
 def copy(tuples, table, database=DATABASE):
     """Pipe the tuples as a CSV stream to a posgresql database table"""
     query = "COPY %s FROM STDIN WITH CSV" % table
-    p = sp.Popen([PSQL, database, "-c", query], stdin=sp.PIPE)
+    p = sp.Popen([PSQL, database, "-c", query], stdin=sp.PIPE,
+                 bufsize=BUFSIZE)
     db.dump_as_csv(tuples, p.stdin, end_marker=PG_COPY_END_MARKER)
     if p.wait() != 0:
         logging.error("Failed to load tuples into %s", table)

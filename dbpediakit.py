@@ -183,6 +183,7 @@ def dump_as_csv(tuples, output, end_marker=None):
             writer.writerow(tuple)
         if end_marker is not None:
             f.write(end_marker)
+        f.flush()
 
     if hasattr(output, 'write'):
         write_csv(output)
