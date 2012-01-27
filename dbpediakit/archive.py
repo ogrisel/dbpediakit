@@ -1,20 +1,13 @@
-"""Utility script to tweak the ntriples DBpedia dumps"""
+"""Utility script to access the ntriples DBpedia dumps from python"""
 # License: MIT
 
 import csv
 import logging
 import os
-import sys
 import re
 from collections import namedtuple
 from urllib import unquote
 from bz2 import BZ2File
-
-
-# use stderr for progress monitoring to be able to use stdout for piping CSV
-# stream to postgresql for instance
-logging.basicConfig(stream=sys.stderr, level=logging.INFO,
-                    format='%(levelname)s\t%(asctime)s\t%(message)s')
 
 URL_PATTERN = ("http://downloads.dbpedia.org/"
                "{version}/{lang}/{archive_name}_{lang}.nt.bz2")
