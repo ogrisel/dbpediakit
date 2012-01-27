@@ -1,12 +1,5 @@
 """Use PostgreSQL to extract a taxonomy out of DBpedia categories
 
-The default category tree of DBpedia / Wikipedia has more than 500k categories
-most of which are not interesting.
-
-This script loads the whole tree in a PostgreSQL DB and use several joins to
-extract a substree of ~50K interesting topics which focusing on topics that are
-related to an resource with a descriptive enough abstract.
-
 Running this script will probably take around 30 minutes.
 
 """

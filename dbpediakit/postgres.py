@@ -26,7 +26,7 @@ user and your dbpediakit usage. For instance my unix account is `ogrisel`::
 You can check that database dbpediakit has been created successfully and that
 your unix account as access to it with::
 
-  $ psql -d dbpediakit
+  $ psql dbpediakit
   psql (9.1.2)
   Type "help" for help.
 
