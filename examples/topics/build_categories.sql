@@ -23,19 +23,20 @@ LEFT OUTER JOIN redirects r
 ON c.candidate_article = r.source;
 
 -- Materialize the interesting categories by looking up those with a matching
--- wikipedia article with a not so short abstract
+-- wikipedia article with a not so short abstract: we name this subset as
+-- "semantically grounded": they have a matching real life concept.
 
-DROP TABLE IF EXISTS semantic_categories;
-CREATE TABLE semantic_categories (
+DROP TABLE IF EXISTS grounded_categories;
+CREATE TABLE grounded_categories (
     id varchar(300),
     broader varchar(300),
-    semantic bool,
+    grounded bool,
     article varchar(300)
 );
 
-INSERT INTO semantic_categories
+INSERT INTO grounded_categories
 SELECT c.id, c.broader,
-a.text IS NOT NULL AS semantic,
+a.text IS NOT NULL AS grounded,
 CASE WHEN (a.text IS NOT NULL) THEN a.id
 ELSE NULL
   END AS article
@@ -43,11 +44,11 @@ FROM redirected_categories c
 LEFT OUTER JOIN long_abstracts a
 ON c.candidate_article = a.id;
 
-CREATE INDEX semantic_categories_id_idx ON semantic_categories (id);
-CREATE INDEX semantic_categories_broader_idx ON semantic_categories (broader);
-CREATE INDEX semantic_categories_article_idx ON semantic_categories (article);
+CREATE INDEX grounded_categories_id_idx ON grounded_categories (id);
+CREATE INDEX grounded_categories_broader_idx ON grounded_categories (broader);
+CREATE INDEX grounded_categories_article_idx ON grounded_categories (article);
 
--- Descend the broader to narrower relationship from handpicked semantic
+-- Descend the broader to narrower relationship from handpicked grounded
 -- roots
 
 -- TODO
