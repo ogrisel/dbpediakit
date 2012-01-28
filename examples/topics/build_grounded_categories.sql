@@ -1,5 +1,6 @@
--- Script to materialized a sensible enough taxonomy from the Wikipedia
--- categories tree
+-- Script to find categories that have a matching Wikipedia article
+-- We call those categories "grounded categories" or "grounded topics" when
+-- part of a taxonomy
 
 -- Author: Olivier Grisel <olivier.grisel@ensta.org>
 -- License: MIT
@@ -47,8 +48,3 @@ ON c.candidate_article = a.id;
 CREATE INDEX grounded_categories_id_idx ON grounded_categories (id);
 CREATE INDEX grounded_categories_broader_idx ON grounded_categories (broader);
 CREATE INDEX grounded_categories_article_idx ON grounded_categories (article);
-
--- Descend the broader to narrower relationship from handpicked grounded
--- roots
-
--- TODO
