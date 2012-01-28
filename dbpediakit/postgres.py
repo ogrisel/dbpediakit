@@ -44,13 +44,55 @@ import subprocess as sp
 import dbpediakit.archive as db
 import logging
 
-SQL_LIST_TABLES = ("SELECT tablename FROM pg_tables"
-                   " WHERE schemaname = 'public';")
+SQL_LIST_TABLES = (
+    "SELECT tablename FROM pg_tables"
+    " WHERE schemaname = 'public';"
+)
+SQL_LIST_FUNCTIONS = (
+    "SELECT proname from pg_proc p, pg_namespace n"
+    " WHERE p.pronamespace = n.oid and n.nspname = 'public';"
+)
+
 DATABASE = "dbpediakit"
 PSQL = "psql"
 PG_COPY_END_MARKER = "\\.\n"  # an EOF "\x04" would also probably work
 BUFSIZE = 1024 ** 2
 CREATE_INDEX = "CREATE INDEX {table}_{column}_idx ON {table} ({column})"
+TABLE_DEF = "-- define tables:"
+FUNC_DEF = "-- define functions:"
+
+
+def run_file(filename, database=DATABASE):
+    return sp.call([PSQL, database, "-f", filename])
+
+
+def check_run_if_undef(filename, database=DATABASE, tables=(), functions=()):
+    """Conditionally run SQL script if missing relation or func
+
+    The script is expected to host the matching CREATE TABLE,
+    CREATE FUNCTION, CREATE AGGREGATE statements
+    """
+    defined_tables = set(select(SQL_LIST_TABLES).split())
+    defined_functions = set(select(SQL_LIST_FUNCTIONS).split())
+    with open(filename, 'r') as sql_script:
+        for line in sql_script:
+            if line.startswith(TABLE_DEF):
+                tables += tuple(
+                    t.strip() for t in line[len(TABLE_DEF):].split(","))
+            elif line.startswith(FUNC_DEF):
+                functions += tuple(
+                    f.strip() for f in line[len(FUNC_DEF):].split(","))
+
+    if (set(tables) - defined_tables) or (set(functions) - defined_functions):
+        logging.info("Running '%s' to define tables %r and functions %r",
+                    filename, list(sorted(tables)), list(sorted(functions)))
+        code = run_file(filename, database=database)
+        if code != 0:
+            raise RuntimeError("Failed to execute: " + filename)
+        return True
+    else:
+        logging.info("Skipping sql script '%s'", filename)
+        return False
 
 
 def execute(query, database=DATABASE):
@@ -79,7 +121,7 @@ def check_link_table(archive_name, table, database=DATABASE,
     if table in select(SQL_LIST_TABLES).split():
         logging.info("Table '%s' exists: skipping init from archive '%s'",
                      table, archive_name)
-        return
+        return False
     logging.info("Loading link table '%s' with tuples from archive '%s'",
                  table, archive_name)
 
@@ -98,6 +140,7 @@ def check_link_table(archive_name, table, database=DATABASE,
         logging.info("Creating index on column '%s' in table '%s'",
                      column, table)
         execute(CREATE_INDEX.format(table=table, column=column))
+    return True
 
 
 def check_text_table(archive_name, table, database=DATABASE, **extract_params):
@@ -105,7 +148,7 @@ def check_text_table(archive_name, table, database=DATABASE, **extract_params):
     if table in select(SQL_LIST_TABLES).split():
         logging.info("Table '%s' exists: skipping init from archive '%s'",
                      table, archive_name)
-        return
+        return False
     logging.info("Loading text table '%s' with tuples from archive '%s'",
                  table, archive_name)
 
@@ -123,3 +166,4 @@ def check_text_table(archive_name, table, database=DATABASE, **extract_params):
     logging.info("Creating index on column '%s' in table '%s'",
                  "id", table)
     execute(CREATE_INDEX.format(table=table, column="id"))
+    return True
