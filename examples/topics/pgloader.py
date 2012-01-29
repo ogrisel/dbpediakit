@@ -48,3 +48,7 @@ if updated:
 # Load some aggregation function to manipulate arrays of arrays (to materialize
 # paths to the roots in the taxonomy)
 pg.check_run_if_undef(join(FOLDER, "path_aggregation_func.sql"))
+
+# Aggregate categories info and find semantic grounding by trying to match with
+# wikipedia articles
+pg.check_run_if_undef(join(FOLDER, "build_grounded_categories.sql"))
