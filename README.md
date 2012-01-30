@@ -44,7 +44,8 @@ by Wikipedia articles and schemas for their properties).
 - `dbpediakit.postgres` provides utilities to load the tuples into a
   PostgreSQL database using the `psql` command line client for efficient
   bulk loading of the parsed data using the `COPY` command from `stdin`.
-  The decompressed archive is never fully in memory nor in a temporary file.
+  The decompressed archive is never fully loaded in memory nor in a
+  temporary file but directly streamed to the PostgreSQL database instead.
 
 
 ## Complete examples
