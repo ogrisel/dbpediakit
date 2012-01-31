@@ -6,11 +6,13 @@ Running this script will probably take around 30 minutes.
 # Author: Olivier Grisel <olivier.grisel@ensta.org>
 # License: MIT
 
+import logging
 from os.path import join, sep
 import dbpediakit.postgres as pg
 
 FOLDER = __file__.rsplit(sep, 1)[0]
 max_items = None  # set to None for processing the complete dumps
+max_depth = 5
 
 
 def candidate_article_processor(tuples):
@@ -52,3 +54,11 @@ pg.check_run_if_undef(join(FOLDER, "array_aggregate.sql"))
 # Aggregate categories info and find semantic grounding by trying to match with
 # wikipedia articles
 pg.check_run_if_undef(join(FOLDER, "build_grounded_categories.sql"))
+pg.check_run_if_undef(join(FOLDER, "init_taxonomy.sql"))
+
+current_depth = int(pg.select("SELECT max(depth) from taxonomy_dag"))
+print current_depth
+if current_depth < max_depth:
+    for depth in range(current_depth + 1, max_depth + 1):
+        logging.info("Growing taxonomy to depth=%d", depth)
+        pg.check_run_if_undef(join(FOLDER, "grow_taxonomy.sql"))

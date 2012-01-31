@@ -83,7 +83,11 @@ def check_run_if_undef(filename, database=DATABASE, tables=(), functions=()):
                 functions += tuple(
                     f.strip() for f in line[len(FUNC_DEF):].split(","))
 
-    if (set(tables) - defined_tables) or (set(functions) - defined_functions):
+    missing_tables = set(tables) - defined_tables
+    missing_functions = set(functions) - defined_functions
+    no_dependency = not tables and not functions
+
+    if no_dependency or missing_tables or missing_functions:
         logging.info("Running '%s' to define tables %r and functions %r",
                     filename, list(sorted(tables)), list(sorted(functions)))
         code = run_file(filename, database=database)
