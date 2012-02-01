@@ -57,7 +57,6 @@ pg.check_run_if_undef(join(FOLDER, "build_grounded_categories.sql"))
 pg.check_run_if_undef(join(FOLDER, "init_taxonomy.sql"))
 
 current_depth = int(pg.select("SELECT max(depth) from taxonomy_dag"))
-print current_depth
 if current_depth < max_depth:
     for depth in range(current_depth + 1, max_depth + 1):
         logging.info("Growing taxonomy to depth=%d", depth)
