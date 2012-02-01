@@ -5,8 +5,9 @@
 -- License: MIT
 
 INSERT INTO taxonomy_dag
-SELECT gc.id, gc.article, td.depth + 1, td.path || gc.id,
-CASE WHEN gc.grounded THEN td.grounded_path || gc.id ELSE td.grounded_path END
+SELECT gc.id, gc.article, gc.grounded, td.depth + 1, td.path || gc.id,
+CASE WHEN gc.grounded THEN td.grounded_path || gc.id ELSE td.grounded_path END,
+td.grounded_path[array_length(td.grounded_path, 1)]
 FROM grounded_categories gc, taxonomy_dag td
 WHERE gc.broader = td.id
 AND td.depth = (select max(depth) from taxonomy_dag)

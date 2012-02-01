@@ -10,13 +10,15 @@ DROP TABLE IF EXISTS taxonomy_dag;
 CREATE TABLE taxonomy_dag (
     id varchar(300),
     article varchar(300),
+    grounded boolean,
     depth integer,
     path varchar(300)[], -- complete path
-    grounded_path varchar(300)[] -- subset of the path with
+    grounded_path varchar(300)[], -- subset of the path with
+    grounded_broader varchar(300) -- the nearest grounded ancestor or NULL
 );
 
 INSERT INTO taxonomy_dag
-SELECT gc.id, gc.article, 0, ARRAY[gc.id], ARRAY[gc.id]
+SELECT gc.id, gc.article, gc.grounded, 0, ARRAY[gc.id], ARRAY[gc.id], NULL
 FROM grounded_categories gc
 WHERE
 gc.broader = 'Category:Main_topic_classifications'

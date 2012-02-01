@@ -12,7 +12,7 @@ import dbpediakit.postgres as pg
 
 FOLDER = __file__.rsplit(sep, 1)[0]
 max_items = None  # set to None for processing the complete dumps
-max_depth = 5
+max_depth = 3
 
 
 def candidate_article_processor(tuples):
