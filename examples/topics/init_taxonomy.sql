@@ -24,6 +24,8 @@ WHERE
 gc.broader = 'Category:Main_topic_classifications'
 AND gc.grounded = 't'
 AND gc.id NOT IN (
+    'Category:Life',
+    'Category:People',
     'Category:Chronology',
     'Category:Mathematics',
     'Category:Applied_sciences'
