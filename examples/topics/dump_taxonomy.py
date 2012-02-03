@@ -12,10 +12,16 @@ else:
 
 
 select_query = """\
-SELECT d.id, array_to_string(array_agg(d.grounded_broader), ' ') FROM (
-  SELECT DISTINCT id, grounded_broader FROM taxonomy_dag WHERE grounded = 't'
-) AS d GROUP
-BY d.id
+SELECT
+  d.id,
+  string_agg(d.grounded_broader, ' ' ORDER BY d.grounded_broader),
+  first_agg(d.article)
+FROM (
+  SELECT DISTINCT id, grounded_broader, article
+  FROM taxonomy_dag
+  WHERE grounded = 't'
+) AS d
+GROUP BY d.id
 """
 copy_query = "COPY (%s) TO %s WITH (FORMAT CSV, FORCE_QUOTE *);" % (
     select_query, output)
