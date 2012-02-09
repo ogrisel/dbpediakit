@@ -45,6 +45,8 @@ postgresql with `sudo service postgresql restart`.
 This will download the data dumps from DBpedia, parse the RDF and load the
 tuples into PostgreSQL tables and create indices on columns involved in joins:
 
-    $ python pgloader.py
+    $ python build_taxonomy.py
 
 This will take around 30 min on a typical macbook pro in total.
+
+TODO.
