@@ -4,6 +4,7 @@ import sys
 import os.path
 import dbpediakit.postgres as pg
 
+USE_QUOTED_CSV = False
 
 if len(sys.argv) > 1:
     output = "'%s'" % os.path.abspath(sys.argv[1])
@@ -23,7 +24,11 @@ FROM (
 ) AS d
 GROUP BY d.id
 """
-copy_query = "COPY (%s) TO %s WITH (FORMAT CSV, FORCE_QUOTE *);" % (
-    select_query, output)
+if USE_QUOTED_CSV:
+    copy_query = "COPY (%s) TO %s WITH (FORMAT CSV, FORCE_QUOTE *);" % (
+        select_query, output)
+else:
+    copy_query = "COPY (%s) TO %s;" % (select_query, output)
+
 print copy_query
 pg.execute(copy_query)
