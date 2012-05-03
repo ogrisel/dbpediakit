@@ -169,5 +169,12 @@ def check_text_table(archive_name, table, database=DATABASE, **extract_params):
     copy(tuples, table, database=database)
     logging.info("Creating index on column '%s' in table '%s'",
                  "id", table)
-    execute(CREATE_INDEX.format(table=table, column="id"))
+    execute(CREATE_INDEX.format(table=table, column="id"), database=database)
     return True
+
+
+def export_as_tsv(table, columns, filename, database=DATABASE):
+    """Export the content of a SQL table as tab separated values file"""
+    sql = "copy (select %s from %s) TO '%s';" % (
+        ', '.join(columns), table, filename)
+    execute(sql, database=database)

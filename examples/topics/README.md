@@ -20,11 +20,9 @@ To initialize the PostgreSQL under Ubuntu / Debian::
 Then switch to the postgres admin user to create a role and DB for your unix
 user and your dbpediakit usage. For instance my unix account is `ogrisel`:
 
-    $ sudo su - postgres
-    $ createuser ogrisel
+    $ sudo -u postgres createuser ogrisel
     Shall the new role be a superuser? (y/n) y
-    $ createdb -O ogrisel -E UTF8 dbpediakit
-    $ ^D
+    $ sudo -u postgres createdb -O ogrisel -E UTF8 dbpediakit
 
 You can check that database dbpediakit has been created successfully and that
 your unix account as access to it with::
