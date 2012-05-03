@@ -173,8 +173,19 @@ def check_text_table(archive_name, table, database=DATABASE, **extract_params):
     return True
 
 
-def export_as_tsv(table, columns, filename, database=DATABASE):
+def export_as_tsv(filename, table=None, columns=None, query=None,
+                  database=DATABASE):
     """Export the content of a SQL table as tab separated values file"""
-    sql = "copy (select %s from %s) TO '%s';" % (
-        ', '.join(columns), table, filename)
+
+    if columns is None:
+        columns = '*'
+    else:
+        columns = ', '.join(columns)
+
+    if query is None:
+        if table is None:
+            raise ValueError('table should not be None if query is None.')
+        query = 'select %s from %s' % (columns, table)
+
+    sql = "copy (query) TO '%s';" % (query, table, filename)
     execute(sql, database=database)
