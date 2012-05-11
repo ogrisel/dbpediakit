@@ -7,7 +7,7 @@ Running this script will probably take around 30 minutes.
 # License: MIT
 
 import logging
-from os.path import join, sep, abspath
+from os.path import join, sep
 import dbpediakit.postgres as pg
 
 SQL_SCRIPTS_FOLDER = __file__.rsplit(sep, 1)[0]
@@ -77,21 +77,7 @@ def grow_taxonomy(max_depth=1):
                                        "grow_taxonomy.sql"))
 
 
-def dump_results(filename, query, format='tsv'):
-    filepath = abspath(filename)
-    if format == 'csv':
-        copy_query = "COPY (%s) TO '%s' WITH (FORMAT CSV, FORCE_QUOTE *);" % (
-            query, filepath)
-    elif format == 'tsv':
-        copy_query = "COPY (%s) TO '%s';" % (query, filepath)
-
-    # TODO: use a subprocess to dump to stdout and pipe to file from the
-    # python process to be able to use the same unix user and avoid file
-    # permission issues
-    pg.execute(copy_query)
-
-
-def dump_taxonomy(filename, format='tsv'):
+def dump_taxonomy(filename):
     """"""
     query = """\
     SELECT
@@ -105,7 +91,7 @@ def dump_taxonomy(filename, format='tsv'):
     ) AS d
     GROUP BY d.id
     """
-    dump_results(filename, query, format=format)
+    pg.export_to_file(filename, query=query)
 
 
 def dump_examples(filename, format='tsv'):
@@ -114,7 +100,7 @@ def dump_examples(filename, format='tsv'):
     FROM grouped_taxonomy_articles g, long_abstracts la
     WHERE g.id = la.id
     """
-    dump_results(filename, query, format=format)
+    pg.export_to_file(filename, query=query)
 
 
 if __name__ == "__main__":

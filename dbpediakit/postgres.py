@@ -1,14 +1,17 @@
 """Utilities to load tuples from DBpedia to a PostgreSQL database
 
+PostgreSQL is used as an adhoc workbench for performing JOIN operations
+that are necessary to compute aggregates suitable for taxonomy building.
+
 These utilities use the `psql` commandline client with subprocess and pipe to
 communicate with the DB:
  - to avoid introducing a dependency on DB driver
  - to make it possible to bulk load tuples formatted as a CSV stream to the
    DB without using an intermediate file
 
-On the othe hand those utilities do no SQL escaping hence are vulnerable
-to SQL injection and should not be deployed on any kind of user facing
-server application.
+On the other hand those utilities do no SQL escaping hence are vulnerable
+to SQL or shell injections and should not be deployed on any kind of
+user facing server application.
 
 To initialize the PostgreSQL under Ubuntu / Debian::
 
@@ -117,6 +120,46 @@ def copy(tuples, table, database=DATABASE):
         logging.error("Failed to load tuples into %s", table)
 
 
+def export_to_file(filename, table=None, columns=None, query=None,
+                   database=DATABASE):
+    """Export the content of a table or results of a query to a file"""
+
+    if columns is None:
+        columns = '*'
+    else:
+        columns = ', '.join(columns)
+
+    if query is None:
+        if table is None:
+            raise ValueError('table should not be None if query is None.')
+        query = 'select %s from %s' % (columns, table)
+
+    if filename.endswith('.csv'):
+        # use CSV escaping as most CSV consumers would expect (e.g. for direct
+        # Apache Solr ingestion with text fields)
+        copy_query = ("COPY (%s) TO STDOUT WITH (FORMAT CSV, FORCE_QUOTE *);"
+                      % query)
+    else:
+        # use TSV formatting by default
+        copy_query = "COPY (%s) TO STDOUT;" % query
+
+    logging.info("Exporting collected data to %s", filename)
+
+    # pipe the output of the psql process back to python in order to open the
+    # output file with the permission of the current unix user instead of the
+    # postgresql server unix account
+    p = sp.Popen([PSQL, database, "-c", copy_query], stdout=sp.PIPE,
+                 bufsize=BUFSIZE)
+    with open(filename, 'wb') as output:
+        while True:
+            buffer = p.stdout.read(BUFSIZE)
+            if buffer == '':
+                break
+            output.write(buffer)
+    if p.wait() != 0:
+        logging.error("Failed to export %s into %s", query, filename)
+
+
 def check_link_table(archive_name, table, database=DATABASE,
                      processor=None,
                      columns=(('source', True), ('target', True)),
@@ -171,21 +214,3 @@ def check_text_table(archive_name, table, database=DATABASE, **extract_params):
                  "id", table)
     execute(CREATE_INDEX.format(table=table, column="id"), database=database)
     return True
-
-
-def export_as_tsv(filename, table=None, columns=None, query=None,
-                  database=DATABASE):
-    """Export the content of a SQL table as tab separated values file"""
-
-    if columns is None:
-        columns = '*'
-    else:
-        columns = ', '.join(columns)
-
-    if query is None:
-        if table is None:
-            raise ValueError('table should not be None if query is None.')
-        query = 'select %s from %s' % (columns, table)
-
-    sql = "copy (query) TO '%s';" % (query, table, filename)
-    execute(sql, database=database)
