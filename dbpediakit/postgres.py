@@ -46,6 +46,7 @@ your unix account as access to it with::
 import subprocess as sp
 import dbpediakit.archive as db
 import logging
+from bz2 import BZ2File
 
 SQL_LIST_TABLES = (
     "SELECT tablename FROM pg_tables"
@@ -150,7 +151,9 @@ def export_to_file(filename, table=None, columns=None, query=None,
     # postgresql server unix account
     p = sp.Popen([PSQL, database, "-c", copy_query], stdout=sp.PIPE,
                  bufsize=BUFSIZE)
-    with open(filename, 'wb') as output:
+
+    writer = BZ2File if filename.endswith('.bz2') else open
+    with writer(filename, 'wb') as output:
         while True:
             buffer = p.stdout.read(BUFSIZE)
             if buffer == '':

@@ -128,7 +128,7 @@ if __name__ == "__main__":
         help='Filename to store the TSV export of the taxonomy.')
 
     parser.add_argument(
-        '--examples-file', default='dbpedia-examples.tsv',
+        '--examples-file', default='dbpedia-examples.tsv.bz2',
         help='Filename to store the TSV export of the examples text'
         ' categorized using the taxonomy.')
 
