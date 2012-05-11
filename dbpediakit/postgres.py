@@ -67,6 +67,7 @@ FUNC_DEF = "-- define functions:"
 
 
 def run_file(filename, database=DATABASE):
+    logging.info("Running '%s'", filename)
     return sp.call([PSQL, database, "-f", filename])
 
 

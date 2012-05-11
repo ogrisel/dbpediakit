@@ -67,14 +67,13 @@ def grow_taxonomy(max_depth=1):
     # with wikipedia articles
     pg.check_run_if_undef(join(SQL_SCRIPTS_FOLDER,
                                "build_grounded_categories.sql"))
-    pg.check_run_if_undef(join(SQL_SCRIPTS_FOLDER, "init_taxonomy.sql"))
+    pg.run_file(join(SQL_SCRIPTS_FOLDER, "init_taxonomy.sql"))
 
     current_depth = int(pg.select("SELECT max(depth) from taxonomy_dag"))
     if current_depth < max_depth:
         for depth in range(current_depth + 1, max_depth + 1):
             logging.info("Growing taxonomy to depth=%d", depth)
-            pg.check_run_if_undef(join(SQL_SCRIPTS_FOLDER,
-                                       "grow_taxonomy.sql"))
+            pg.run_file(join(SQL_SCRIPTS_FOLDER, "grow_taxonomy.sql"))
 
 
 def dump_taxonomy(filename):
@@ -149,8 +148,7 @@ if __name__ == "__main__":
             grow_taxonomy(args.max_depth)
         elif operation == 'build_examples':
             check_load_examples_data(args.max_items)
-            pg.check_run_if_undef(
-                join(SQL_SCRIPTS_FOLDER, "build_dataset.sql"))
+            pg.run_file(join(SQL_SCRIPTS_FOLDER, "build_dataset.sql"))
         elif operation == 'dump_taxonomy':
             dump_taxonomy(args.taxonomy_file)
         elif operation == 'dump_examples':
